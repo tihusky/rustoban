@@ -1,0 +1,25 @@
+:LEVELSTART
+:WIDTH 6
+:HEIGHT 6
+:LAYOUT
+######
+#  @ #
+# $  #
+#### #
+#.   #
+######
+:LEVELEND
+
+:LEVELSTART
+:WIDTH 9
+:HEIGHT 8
+:LAYOUT
+#########
+# @     #
+#       #
+# $ ##. #
+#   ##. #
+#   $   #
+#       #
+#########
+:LEVELEND
