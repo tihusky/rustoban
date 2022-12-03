@@ -36,4 +36,10 @@ impl Level {
     pub fn in_bounds(&self, point: Point2D) -> bool {
         (point.x >= 0 && point.x < self.width) && (point.y >= 0 && point.y < self.height)
     }
+
+    pub fn get_tile(&self, x: i32, y: i32) -> Option<&TileType> {
+        let idx = (self.width * y + x) as usize;
+
+        self.tiles.get(idx)
+    }
 }

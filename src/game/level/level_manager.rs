@@ -68,6 +68,16 @@ impl LevelManager {
         if command == "LEVELSTART" {
             *level = Level::new();
         } else if command == "LEVELEND" {
+            if level.tiles.len() != (level.width * level.height) as usize {
+                panic!("Level dimensions do not match number of tiles");
+            } else if level.player == (Point2D { x: 0, y: 0 }) {
+                panic!("Player spawn position not set");
+            } else if level.boxes.len() < level.targets.len() {
+                panic!("Level doesn't contain enough boxes");
+            } else if level.targets.is_empty() {
+                panic!("Level doesn't contain any targets");
+            }
+
             self.levels.push(level.clone());
         } else if command == "LAYOUT" {
             *mode = ReadMode::Layout;
@@ -133,11 +143,7 @@ impl LevelManager {
         }
     }
 
-    pub fn get_level(&self, idx: usize) -> Option<Level> {
-        if let Some(level) = self.levels.get(idx) {
-            Some(level.clone())
-        } else {
-            None
-        }
+    pub fn get_level(&self, idx: usize) -> Option<&Level> {
+        self.levels.get(idx)
     }
 }
