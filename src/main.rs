@@ -3,11 +3,14 @@ mod utils;
 
 mod prelude {
     pub use crate::game::level::*;
+    pub use crate::game::*;
     pub use crate::utils::*;
     pub use ggez::conf::{WindowMode, WindowSetup};
     pub use ggez::event::{self, EventHandler, EventLoop};
     pub use ggez::graphics::*;
+    pub use ggez::input::keyboard::KeyCode;
     pub use ggez::*;
+    pub use uuid::Uuid;
 
     // In pixels
     pub const TILE_WIDTH: i32 = 32;
@@ -23,8 +26,9 @@ use prelude::*;
 struct State {
     levels: LevelManager,
     current_level: usize,
-    player: Point2D,
-    boxes: Vec<Point2D>,
+    player: GameEntity,
+    boxes: Vec<GameEntity>,
+    moves: Vec<PlayerMove>,
 }
 
 impl State {
@@ -35,15 +39,24 @@ impl State {
         lm.load_from_file("./resources/levels.txt")
             .expect("Could not read levels file");
 
-        let player = lm.get_level(current_level).unwrap().player;
-        let boxes = lm.get_level(current_level).unwrap().boxes.clone();
+        let player = GameEntity::new(lm.get_level(current_level).unwrap().player);
+        let mut boxes = Vec::new();
+
+        for box_pos in &lm.get_level(current_level).unwrap().boxes {
+            boxes.push(GameEntity::new(*box_pos));
+        }
 
         Self {
             levels: lm,
             current_level,
             player,
             boxes,
+            moves: Vec::new(),
         }
+    }
+
+    fn get_current_level(&self) -> Option<&Level> {
+        self.levels.get_level(self.current_level)
     }
 
     fn draw_player(&self, ctx: &Context, canvas: &mut Canvas) -> GameResult {
@@ -52,7 +65,7 @@ impl State {
         let (l_width, l_height) = self.get_current_level().unwrap().get_dimensions();
         let x_offset = (WINDOW_WIDTH - l_width) / 2 * TILE_WIDTH;
         let y_offset = (WINDOW_HEIGHT - l_height) / 2 * TILE_HEIGHT;
-        let (tile_x, tile_y) = point_to_pixels(self.player);
+        let (tile_x, tile_y) = point_to_pixels(self.player.position);
         let rect_x = x_offset + tile_x + TILE_WIDTH / 4;
         let rect_y = y_offset + tile_y + TILE_HEIGHT / 4;
 
@@ -76,7 +89,7 @@ impl State {
         let y_offset = (WINDOW_HEIGHT - l_height) / 2 * TILE_HEIGHT;
 
         for b in &self.boxes {
-            let (tile_x, tile_y) = point_to_pixels(*b);
+            let (tile_x, tile_y) = point_to_pixels(b.position);
             let rect_x = x_offset + tile_x + TILE_WIDTH / 4;
             let rect_y = y_offset + tile_y + TILE_HEIGHT / 4;
 
@@ -93,13 +106,74 @@ impl State {
         Ok(())
     }
 
-    fn get_current_level(&self) -> Option<&Level> {
-        self.levels.get_level(self.current_level)
+    fn undo_last_move(&mut self) {
+        if let Some(last_move) = self.moves.pop() {
+            self.player.position -= last_move.delta;
+
+            if let Some(id) = last_move.box_id {
+                let b = self.boxes.iter_mut().find(|b| b.id == id).unwrap();
+
+                b.position -= last_move.delta;
+            }
+        }
     }
 }
 
 impl EventHandler for State {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
+        if ctx.keyboard.is_key_just_pressed(KeyCode::Back) {
+            self.undo_last_move();
+        }
+
+        let delta = if ctx.keyboard.is_key_just_pressed(KeyCode::Left) {
+            Point2D { x: -1, y: 0 }
+        } else if ctx.keyboard.is_key_just_pressed(KeyCode::Right) {
+            Point2D { x: 1, y: 0 }
+        } else if ctx.keyboard.is_key_just_pressed(KeyCode::Up) {
+            Point2D { x: 0, y: -1 }
+        } else if ctx.keyboard.is_key_just_pressed(KeyCode::Down) {
+            Point2D { x: 0, y: 1 }
+        } else {
+            Point2D { x: 0, y: 0 }
+        };
+
+        if delta.x != 0 || delta.y != 0 {
+            let level = self.get_current_level().unwrap();
+            let player_dest = self.player.position + delta;
+
+            if level.is_accessible(player_dest) {
+                let mut boxes = self.boxes.clone();
+
+                if let Some(b) = boxes.iter_mut().find(|b| b.position == player_dest) {
+                    let box_dest = b.position + delta;
+                    let contains_box = self
+                        .boxes
+                        .iter()
+                        .map(|b| b.position)
+                        .any(|pos| pos == box_dest);
+
+                    if level.is_accessible(box_dest) && !contains_box {
+                        b.position = box_dest;
+
+                        self.moves.push(PlayerMove {
+                            delta,
+                            box_id: Some(b.id),
+                        });
+
+                        self.boxes = boxes;
+                        self.player.position = player_dest;
+                    }
+                } else {
+                    self.moves.push(PlayerMove {
+                        delta,
+                        box_id: None,
+                    });
+
+                    self.player.position = player_dest;
+                }
+            }
+        }
+
         Ok(())
     }
 

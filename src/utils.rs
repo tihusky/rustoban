@@ -1,3 +1,5 @@
+use std::ops::SubAssign;
+
 use crate::prelude::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -17,6 +19,15 @@ impl std::ops::Add for Point2D {
     }
 }
 
+impl std::ops::AddAssign for Point2D {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        };
+    }
+}
+
 impl std::ops::Sub for Point2D {
     type Output = Self;
 
@@ -25,6 +36,15 @@ impl std::ops::Sub for Point2D {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
         }
+    }
+}
+
+impl SubAssign for Point2D {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = Self {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+        };
     }
 }
 

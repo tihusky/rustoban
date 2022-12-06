@@ -37,6 +37,14 @@ impl Level {
         (point.x >= 0 && point.x < self.width) && (point.y >= 0 && point.y < self.height)
     }
 
+    pub fn is_accessible(&self, point: Point2D) -> bool {
+        if let Some(tile) = self.get_tile(point.x, point.y) {
+            return *tile != TileType::Wall;
+        }
+
+        false
+    }
+
     pub fn get_dimensions(&self) -> (i32, i32) {
         (self.width, self.height)
     }
