@@ -2,7 +2,7 @@ use std::ops::SubAssign;
 
 use crate::prelude::*;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Point2D {
     pub x: i32,
     pub y: i32,

@@ -4,7 +4,7 @@ mod level_manager;
 
 pub use level_manager::*;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TileType {
     Wall,
     Floor,
@@ -31,10 +31,6 @@ impl Level {
             boxes: Vec::new(),
             targets: Vec::new(),
         }
-    }
-
-    pub fn in_bounds(&self, point: Point2D) -> bool {
-        (point.x >= 0 && point.x < self.width) && (point.y >= 0 && point.y < self.height)
     }
 
     pub fn is_accessible(&self, point: Point2D) -> bool {

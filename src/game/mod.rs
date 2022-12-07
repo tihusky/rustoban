@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 pub mod level;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GameEntity {
     pub id: Uuid,
     pub position: Point2D,
@@ -17,7 +17,7 @@ impl GameEntity {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PlayerMove {
     pub delta: Point2D,
     pub box_id: Option<Uuid>,

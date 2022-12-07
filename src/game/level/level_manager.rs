@@ -143,6 +143,10 @@ impl LevelManager {
         }
     }
 
+    pub fn num_levels(&self) -> usize {
+        self.levels.len()
+    }
+
     pub fn get_level(&self, idx: usize) -> Option<&Level> {
         self.levels.get(idx)
     }
