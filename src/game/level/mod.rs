@@ -41,6 +41,54 @@ impl Level {
         false
     }
 
+    pub fn is_surrounded(&self, point: Point2D) -> bool {
+        let mut wall_left = false;
+
+        for x in 0..point.x {
+            if let Some(tile) = self.get_tile(x, point.y) {
+                if *tile == TileType::Wall {
+                    wall_left = true;
+                    break;
+                }
+            }
+        }
+
+        let mut wall_right = false;
+
+        for x in point.x + 1..self.width {
+            if let Some(tile) = self.get_tile(x, point.y) {
+                if *tile == TileType::Wall {
+                    wall_right = true;
+                    break;
+                }
+            }
+        }
+
+        let mut wall_top = false;
+
+        for y in 0..point.y {
+            if let Some(tile) = self.get_tile(point.x, y) {
+                if *tile == TileType::Wall {
+                    wall_top = true;
+                    break;
+                }
+            }
+        }
+
+        let mut wall_bottom = false;
+
+        for y in point.y + 1..self.height {
+            if let Some(tile) = self.get_tile(point.x, y) {
+                if *tile == TileType::Wall {
+                    wall_bottom = true;
+                    break;
+                }
+            }
+        }
+
+        wall_left && wall_right && wall_top && wall_bottom
+    }
+
     pub fn get_dimensions(&self) -> (i32, i32) {
         (self.width, self.height)
     }
@@ -61,7 +109,13 @@ impl Level {
                 if let Some(tile) = self.get_tile(x, y) {
                     let color = match tile {
                         TileType::Wall => Color::from_rgb(25, 25, 25),
-                        TileType::Floor => Color::from_rgb(85, 85, 85),
+                        TileType::Floor => {
+                            if self.is_surrounded(Point2D { x, y }) {
+                                Color::from_rgb(85, 85, 85)
+                            } else {
+                                Color::BLACK
+                            }
+                        }
                         TileType::Target => Color::from_rgb(0, 165, 74),
                     };
                     let rect = Rect::new_i32(

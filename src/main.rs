@@ -41,9 +41,9 @@ struct State {
 impl State {
     pub fn new() -> Self {
         let mut lm = LevelManager::new();
-        let current_level = 0;
+        let current_level = 23;
 
-        lm.load_from_file("./resources/levels.txt")
+        lm.load_from_file("./resources/levels_easy.txt")
             .expect("Could not read levels file");
 
         let player = GameEntity::new(lm.get_level(current_level).unwrap().player);
