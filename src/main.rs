@@ -41,7 +41,7 @@ struct State {
 impl State {
     pub fn new() -> Self {
         let mut lm = LevelManager::new();
-        let current_level = 23;
+        let current_level = 0;
 
         lm.load_from_file("./resources/levels_easy.txt")
             .expect("Could not read levels file");
@@ -70,6 +70,8 @@ impl State {
     fn update_playing(&mut self, ctx: &Context) {
         if ctx.keyboard.is_key_just_pressed(KeyCode::Back) {
             self.undo_last_move();
+        } else if ctx.keyboard.is_key_just_pressed(KeyCode::R) {
+            self.reset_level();
         }
 
         let delta = if ctx.keyboard.is_key_just_pressed(KeyCode::Left) {
@@ -125,17 +127,7 @@ impl State {
     fn update_solved(&mut self, ctx: &Context) {
         if ctx.keyboard.is_key_just_pressed(KeyCode::Return) {
             self.current_level = (self.current_level + 1) % self.levels.num_levels();
-
-            let level = self.get_current_level().unwrap();
-            let mut boxes: Vec<GameEntity> = Vec::new();
-
-            for pos in &level.boxes {
-                boxes.push(GameEntity::new(*pos));
-            }
-
-            self.player = GameEntity::new(level.player);
-            self.boxes = boxes;
-            self.moves.clear();
+            self.reset_level();
             self.game_state = GameState::Playing;
         }
     }
@@ -223,6 +215,19 @@ impl State {
                 b.position -= last_move.delta;
             }
         }
+    }
+
+    fn reset_level(&mut self) {
+        let level = self.get_current_level().unwrap();
+        let mut boxes: Vec<GameEntity> = Vec::new();
+
+        for pos in &level.boxes {
+            boxes.push(GameEntity::new(*pos));
+        }
+
+        self.player = GameEntity::new(level.player);
+        self.boxes = boxes;
+        self.moves.clear();
     }
 }
 
