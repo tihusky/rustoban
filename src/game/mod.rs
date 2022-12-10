@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+pub mod gfx;
 pub mod level;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

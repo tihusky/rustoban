@@ -2,6 +2,7 @@ mod game;
 mod utils;
 
 mod prelude {
+    pub use crate::game::gfx::ui::*;
     pub use crate::game::level::*;
     pub use crate::game::*;
     pub use crate::utils::*;
@@ -39,12 +40,17 @@ struct State {
 }
 
 impl State {
-    pub fn new() -> Self {
+    pub fn new(ctx: &mut Context) -> Self {
         let mut lm = LevelManager::new();
         let current_level = 0;
 
         lm.load_from_file("./resources/levels_easy.txt")
             .expect("Could not read levels file");
+
+        ctx.gfx.add_font(
+            "Videotype",
+            graphics::FontData::from_path(ctx, "/videotype.ttf").expect("Could not load font"),
+        );
 
         let player = GameEntity::new(lm.get_level(current_level).unwrap().player);
         let mut boxes = Vec::new();
@@ -137,6 +143,44 @@ impl State {
         self.draw_player(ctx, canvas)?;
         self.draw_boxes(ctx, canvas)?;
 
+        let mut hint_blocks: Vec<TextBlock> = Vec::new();
+
+        hint_blocks.push(TextBlock::new(
+            TextFragment::new("Press BACKSPACE to undo last move")
+                .font("Videotype")
+                .scale(20.0),
+            (0.0, 0.0, 0.0, 0.0),
+            TextAlign::Begin,
+        ));
+        hint_blocks.push(TextBlock::new(
+            TextFragment::new("Press R to reset level")
+                .font("Videotype")
+                .scale(20.0),
+            (10.0, 0.0, 0.0, 0.0),
+            TextAlign::Begin,
+        ));
+
+        let mut move_blocks: Vec<TextBlock> = Vec::new();
+
+        move_blocks.push(TextBlock::new(
+            TextFragment::new(&format!("Moves: {}", self.moves.len()))
+                .font("Videotype")
+                .scale(20.0),
+            (0.0, 0.0, 0.0, 0.0),
+            TextAlign::End,
+        ));
+
+        print_spaced(ctx, canvas, &hint_blocks, Point2D { x: 32, y: 24 });
+        print_spaced(
+            ctx,
+            canvas,
+            &move_blocks,
+            Point2D {
+                x: (WINDOW_WIDTH * TILE_WIDTH - 32),
+                y: 24,
+            },
+        );
+
         Ok(())
     }
 
@@ -187,20 +231,35 @@ impl State {
         Ok(())
     }
 
-    fn draw_solved(&self, canvas: &mut Canvas) -> GameResult {
-        let mut text = Text::new("Well done, you solved this level!");
-        let (center_x, center_y) = point_to_pixels(Point2D {
-            x: WINDOW_WIDTH / 2,
-            y: WINDOW_HEIGHT / 2,
-        });
+    fn draw_solved(&self, ctx: &Context, canvas: &mut Canvas) -> GameResult {
+        let origin = Point2D {
+            x: WINDOW_WIDTH / 2 * TILE_WIDTH,
+            y: 0,
+        };
+        let mut blocks: Vec<TextBlock> = Vec::new();
 
-        text.set_layout(TextLayout::center());
-        text.add("\nPress ENTER to play the next level");
+        blocks.push(TextBlock::new(
+            TextFragment::new("Well done, you solved this level!")
+                .font("Videotype")
+                .color(Color::GREEN)
+                .scale(24.0),
+            (48.0, 0.0, 0.0, 0.0),
+            TextAlign::Middle,
+        ));
+        blocks.push(TextBlock::new(
+            TextFragment::new(&format!("Number of Moves: {}", self.moves.len()))
+                .font("Videotype")
+                .scale(48.0),
+            (96.0, 0.0, 0.0, 0.0),
+            TextAlign::Middle,
+        ));
+        blocks.push(TextBlock::new(
+            TextFragment::new("Press ENTER to play the next level").font("Videotype"),
+            (96.0, 0.0, 0.0, 0.0),
+            TextAlign::Middle,
+        ));
 
-        canvas.draw(
-            &text,
-            DrawParam::default().dest([center_x as f32, center_y as f32]),
-        );
+        print_spaced(ctx, canvas, &blocks, origin);
 
         Ok(())
     }
@@ -256,7 +315,7 @@ impl EventHandler for State {
 
         match self.game_state {
             GameState::Playing => self.draw_playing(ctx, &mut canvas)?,
-            GameState::Solved => self.draw_solved(&mut canvas)?,
+            GameState::Solved => self.draw_solved(ctx, &mut canvas)?,
         }
 
         canvas.finish(ctx)?;
@@ -271,15 +330,26 @@ fn main() {
         y: WINDOW_HEIGHT,
     });
 
-    let (ctx, event_loop) = ContextBuilder::new("Rustoban", "Mirko Förster")
+    let resource_dir = if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
+        let mut path = std::path::PathBuf::from(manifest_dir);
+        path.push("resources");
+        path
+    } else {
+        std::path::PathBuf::from("./resources")
+    };
+
+    let (mut ctx, event_loop) = ContextBuilder::new("Rustoban", "Mirko Förster")
         .window_setup(WindowSetup::default().title("Rustoban"))
         .window_mode(
             WindowMode::default()
                 .dimensions(w as f32, h as f32)
                 .resizable(false),
         )
+        .add_resource_path(resource_dir)
         .build()
         .expect("Could not create ggez context!");
 
-    event::run(ctx, event_loop, State::new());
+    let state = State::new(&mut ctx);
+
+    event::run(ctx, event_loop, state);
 }
