@@ -41,58 +41,6 @@ impl Level {
         false
     }
 
-    pub fn is_surrounded(&self, point: Point2D) -> bool {
-        let mut wall_left = false;
-
-        for x in 0..point.x {
-            if let Some(tile) = self.get_tile(x, point.y) {
-                if *tile == TileType::Wall {
-                    wall_left = true;
-                    break;
-                }
-            }
-        }
-
-        let mut wall_right = false;
-
-        for x in point.x + 1..self.width {
-            if let Some(tile) = self.get_tile(x, point.y) {
-                if *tile == TileType::Wall {
-                    wall_right = true;
-                    break;
-                }
-            }
-        }
-
-        let mut wall_top = false;
-
-        for y in 0..point.y {
-            if let Some(tile) = self.get_tile(point.x, y) {
-                if *tile == TileType::Wall {
-                    wall_top = true;
-                    break;
-                }
-            }
-        }
-
-        let mut wall_bottom = false;
-
-        for y in point.y + 1..self.height {
-            if let Some(tile) = self.get_tile(point.x, y) {
-                if *tile == TileType::Wall {
-                    wall_bottom = true;
-                    break;
-                }
-            }
-        }
-
-        wall_left && wall_right && wall_top && wall_bottom
-    }
-
-    pub fn get_dimensions(&self) -> (i32, i32) {
-        (self.width, self.height)
-    }
-
     pub fn get_tile(&self, x: i32, y: i32) -> Option<&TileType> {
         let idx = (self.width * y + x) as usize;
 
@@ -113,12 +61,12 @@ impl Level {
                         x: TILE_WIDTH * (x + x_offset),
                         y: TILE_HEIGHT * (y + y_offset),
                     };
-                    let scale_x = TILE_WIDTH as f32 / bg_image.width() as f32;
-                    let scale_y = TILE_HEIGHT as f32 / bg_image.height() as f32;
 
                     canvas.draw(
                         bg_image,
-                        DrawParam::default().dest(dest).scale([scale_x, scale_y]),
+                        DrawParam::default()
+                            .dest(dest)
+                            .scale(get_scaling_factors(bg_image)),
                     );
 
                     if *tile == TileType::Wall || *tile == TileType::Target {
@@ -128,9 +76,6 @@ impl Level {
                             sprites.get_sprite("target").unwrap()
                         };
 
-                        let scale_x = TILE_WIDTH as f32 / bg_image.width() as f32;
-                        let scale_y = TILE_HEIGHT as f32 / bg_image.height() as f32;
-
                         canvas.draw(
                             image,
                             DrawParam::default()
@@ -138,7 +83,7 @@ impl Level {
                                     x: TILE_WIDTH * (x + x_offset),
                                     y: TILE_HEIGHT * (y + y_offset),
                                 })
-                                .scale([scale_x, scale_y]),
+                                .scale(get_scaling_factors(image)),
                         );
                     }
                 }

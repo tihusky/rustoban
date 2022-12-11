@@ -58,6 +58,9 @@ impl Into<Point2<f32>> for Point2D {
     }
 }
 
-pub fn point_to_pixels(point: Point2D) -> (i32, i32) {
-    (TILE_WIDTH * point.x, TILE_HEIGHT * point.y)
+pub fn get_scaling_factors(image: &Image) -> [f32; 2] {
+    [
+        TILE_WIDTH as f32 / image.width() as f32,
+        TILE_HEIGHT as f32 / image.height() as f32,
+    ]
 }

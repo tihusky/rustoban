@@ -19,7 +19,7 @@ impl LevelManager {
             file.read_to_string(&mut contents)
                 .expect("Error reading levels file");
 
-            let levels: Vec<&str> = contents.split(";").collect();
+            let levels: Vec<&str> = contents.split(';').collect();
 
             for level in levels {
                 self.parse_level_string(level);

@@ -2,6 +2,7 @@ use crate::prelude::*;
 
 pub mod gfx;
 pub mod level;
+pub mod state;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GameEntity {
