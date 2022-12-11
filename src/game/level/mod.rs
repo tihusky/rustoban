@@ -99,41 +99,50 @@ impl Level {
         self.tiles.get(idx)
     }
 
-    pub fn draw(&self, ctx: &Context, canvas: &mut Canvas) -> GameResult {
-        let mut mb = MeshBuilder::new();
+    pub fn draw(&self, sprites: &SpriteManager, canvas: &mut Canvas) {
+        // Calculate where to start drawing so the level is centered in the window
         let x_offset = (WINDOW_WIDTH - self.width) / 2;
         let y_offset = (WINDOW_HEIGHT - self.height) / 2;
+
+        let bg_image = sprites.get_sprite("floor").unwrap();
 
         for y in 0..self.height {
             for x in 0..self.width {
                 if let Some(tile) = self.get_tile(x, y) {
-                    let color = match tile {
-                        TileType::Wall => Color::from_rgb(25, 25, 25),
-                        TileType::Floor => {
-                            if self.is_surrounded(Point2D { x, y }) {
-                                Color::from_rgb(85, 85, 85)
-                            } else {
-                                Color::BLACK
-                            }
-                        }
-                        TileType::Target => Color::from_rgb(0, 165, 74),
+                    let dest = Point2D {
+                        x: TILE_WIDTH * (x + x_offset),
+                        y: TILE_HEIGHT * (y + y_offset),
                     };
-                    let rect = Rect::new_i32(
-                        TILE_WIDTH * (x + x_offset),
-                        TILE_HEIGHT * (y + y_offset),
-                        TILE_WIDTH,
-                        TILE_HEIGHT,
+                    let scale_x = TILE_WIDTH as f32 / bg_image.width() as f32;
+                    let scale_y = TILE_HEIGHT as f32 / bg_image.height() as f32;
+
+                    canvas.draw(
+                        bg_image,
+                        DrawParam::default().dest(dest).scale([scale_x, scale_y]),
                     );
 
-                    mb.rectangle(DrawMode::fill(), rect, color)?;
+                    if *tile == TileType::Wall || *tile == TileType::Target {
+                        let image = if *tile == TileType::Wall {
+                            sprites.get_sprite("wall").unwrap()
+                        } else {
+                            sprites.get_sprite("target").unwrap()
+                        };
+
+                        let scale_x = TILE_WIDTH as f32 / bg_image.width() as f32;
+                        let scale_y = TILE_HEIGHT as f32 / bg_image.height() as f32;
+
+                        canvas.draw(
+                            image,
+                            DrawParam::default()
+                                .dest(Point2D {
+                                    x: TILE_WIDTH * (x + x_offset),
+                                    y: TILE_HEIGHT * (y + y_offset),
+                                })
+                                .scale([scale_x, scale_y]),
+                        );
+                    }
                 }
             }
         }
-
-        let mesh = Mesh::from_data(ctx, mb.build());
-
-        canvas.draw(&mesh, DrawParam::default());
-
-        Ok(())
     }
 }

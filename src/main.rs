@@ -3,6 +3,7 @@ mod utils;
 
 mod prelude {
     pub use crate::game::gfx::ui::*;
+    pub use crate::game::gfx::*;
     pub use crate::game::level::*;
     pub use crate::game::*;
     pub use crate::utils::*;
@@ -32,6 +33,7 @@ use prelude::*;
 
 struct State {
     levels: LevelManager,
+    sprites: SpriteManager,
     current_level: usize,
     player: GameEntity,
     boxes: Vec<GameEntity>,
@@ -44,8 +46,23 @@ impl State {
         let mut lm = LevelManager::new();
         let current_level = 0;
 
-        lm.load_from_file("./resources/levels_easy.txt")
+        lm.load_from_file("./resources/levels.txt")
             .expect("Could not read levels file");
+
+        let mut sm = SpriteManager::new();
+
+        sm.add_sprite(ctx, "wall", "/wall.png")
+            .expect("Error loading wall sprite");
+        sm.add_sprite(ctx, "floor", "/floor.png")
+            .expect("Error loading floor sprite");
+        sm.add_sprite(ctx, "target", "/target.png")
+            .expect("Error loading target sprite");
+        sm.add_sprite(ctx, "player", "/player.png")
+            .expect("Error loading player sprite");
+        sm.add_sprite(ctx, "box", "/box01.png")
+            .expect("Error loading box sprite");
+        sm.add_sprite(ctx, "box_on_target", "/box02.png")
+            .expect("Error loading box on target sprite");
 
         ctx.gfx.add_font(
             "Videotype",
@@ -61,6 +78,7 @@ impl State {
 
         Self {
             levels: lm,
+            sprites: sm,
             current_level,
             player,
             boxes,
@@ -139,9 +157,11 @@ impl State {
     }
 
     fn draw_playing(&mut self, ctx: &Context, canvas: &mut Canvas) -> GameResult {
-        self.get_current_level().unwrap().draw(ctx, canvas)?;
-        self.draw_player(ctx, canvas)?;
-        self.draw_boxes(ctx, canvas)?;
+        self.get_current_level()
+            .unwrap()
+            .draw(&self.sprites, canvas);
+        self.draw_player(&self.sprites, canvas);
+        self.draw_boxes(&self.sprites, canvas);
 
         let mut hint_blocks: Vec<TextBlock> = Vec::new();
 
@@ -184,51 +204,50 @@ impl State {
         Ok(())
     }
 
-    fn draw_player(&self, ctx: &Context, canvas: &mut Canvas) -> GameResult {
-        // Player rect should be half the size of a tile and centered on
-        // the tile the player is standing on
-        let (l_width, l_height) = self.get_current_level().unwrap().get_dimensions();
-        let x_offset = (WINDOW_WIDTH - l_width) / 2 * TILE_WIDTH;
-        let y_offset = (WINDOW_HEIGHT - l_height) / 2 * TILE_HEIGHT;
-        let (tile_x, tile_y) = point_to_pixels(self.player.position);
-        let rect_x = x_offset + tile_x + TILE_WIDTH / 4;
-        let rect_y = y_offset + tile_y + TILE_HEIGHT / 4;
+    fn draw_player(&self, sprites: &SpriteManager, canvas: &mut Canvas) {
+        let level = self.get_current_level().unwrap();
+        let x_offset = (WINDOW_WIDTH - level.width) / 2;
+        let y_offset = (WINDOW_HEIGHT - level.height) / 2;
+        let image = sprites.get_sprite("player").unwrap();
+        let scale_x = TILE_WIDTH as f32 / image.width() as f32;
+        let scale_y = TILE_HEIGHT as f32 / image.height() as f32;
 
-        let mesh = Mesh::new_rectangle(
-            ctx,
-            DrawMode::fill(),
-            Rect::new_i32(rect_x, rect_y, TILE_WIDTH / 2, TILE_HEIGHT / 2),
-            Color::WHITE,
-        )?;
-
-        canvas.draw(&mesh, DrawParam::default());
-
-        Ok(())
+        canvas.draw(
+            image,
+            DrawParam::default()
+                .dest(Point2D {
+                    x: TILE_WIDTH * (self.player.position.x + x_offset),
+                    y: TILE_HEIGHT * (self.player.position.y + y_offset),
+                })
+                .scale([scale_x, scale_y]),
+        );
     }
 
-    fn draw_boxes(&self, ctx: &Context, canvas: &mut Canvas) -> GameResult {
-        // Box rect should be half the size of a tile and centered on
-        // the tile the box is standing on
-        let (l_width, l_height) = self.get_current_level().unwrap().get_dimensions();
-        let x_offset = (WINDOW_WIDTH - l_width) / 2 * TILE_WIDTH;
-        let y_offset = (WINDOW_HEIGHT - l_height) / 2 * TILE_HEIGHT;
+    fn draw_boxes(&self, sprites: &SpriteManager, canvas: &mut Canvas) {
+        let level = self.get_current_level().unwrap();
+        let x_offset = (WINDOW_WIDTH - level.width) / 2;
+        let y_offset = (WINDOW_HEIGHT - level.height) / 2;
 
         for b in &self.boxes {
-            let (tile_x, tile_y) = point_to_pixels(b.position);
-            let rect_x = x_offset + tile_x + TILE_WIDTH / 4;
-            let rect_y = y_offset + tile_y + TILE_HEIGHT / 4;
+            let image = if level.targets.contains(&b.position) {
+                sprites.get_sprite("box_on_target").unwrap()
+            } else {
+                sprites.get_sprite("box").unwrap()
+            };
 
-            let mesh = Mesh::new_rectangle(
-                ctx,
-                DrawMode::fill(),
-                Rect::new_i32(rect_x, rect_y, TILE_WIDTH / 2, TILE_HEIGHT / 2),
-                Color::from_rgb(96, 47, 0),
-            )?;
+            let scale_x = TILE_WIDTH as f32 / image.width() as f32;
+            let scale_y = TILE_HEIGHT as f32 / image.height() as f32;
 
-            canvas.draw(&mesh, DrawParam::default());
+            canvas.draw(
+                image,
+                DrawParam::default()
+                    .dest(Point2D {
+                        x: TILE_WIDTH * (b.position.x + x_offset),
+                        y: TILE_HEIGHT * (b.position.y + y_offset),
+                    })
+                    .scale([scale_x, scale_y]),
+            )
         }
-
-        Ok(())
     }
 
     fn draw_solved(&self, ctx: &Context, canvas: &mut Canvas) -> GameResult {

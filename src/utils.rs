@@ -1,5 +1,6 @@
 use std::ops::SubAssign;
 
+use crate::mint::Point2;
 use crate::prelude::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -45,6 +46,15 @@ impl SubAssign for Point2D {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
         };
+    }
+}
+
+impl Into<Point2<f32>> for Point2D {
+    fn into(self) -> Point2<f32> {
+        Point2 {
+            x: self.x as f32,
+            y: self.y as f32,
+        }
     }
 }
 
