@@ -11,32 +11,25 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(ctx: &mut Context) -> Self {
+    pub fn new(ctx: &mut Context) -> Result<Self, String> {
         let mut lm = LevelManager::new();
         let current_level = 0;
 
-        lm.load_from_file("./resources/levels.txt")
-            .expect("Could not read levels file");
+        lm.load_from_file(ctx, "/levels/levels.txt")?;
 
         let mut sm = SpriteManager::new();
 
-        sm.add_sprite(ctx, "wall", "/wall.png")
-            .expect("Error loading wall sprite");
-        sm.add_sprite(ctx, "floor", "/floor.png")
-            .expect("Error loading floor sprite");
-        sm.add_sprite(ctx, "target", "/target.png")
-            .expect("Error loading target sprite");
-        sm.add_sprite(ctx, "player", "/player.png")
-            .expect("Error loading player sprite");
-        sm.add_sprite(ctx, "box", "/box01.png")
-            .expect("Error loading box sprite");
-        sm.add_sprite(ctx, "box_on_target", "/box02.png")
-            .expect("Error loading box on target sprite");
+        sm.add_sprite(ctx, "wall", "/graphics/wall.png")?;
+        sm.add_sprite(ctx, "floor", "/graphics/floor.png")?;
+        sm.add_sprite(ctx, "target", "/graphics/target.png")?;
+        sm.add_sprite(ctx, "player", "/graphics/player.png")?;
+        sm.add_sprite(ctx, "box", "/graphics/box01.png")?;
+        sm.add_sprite(ctx, "box_on_target", "/graphics/box02.png")?;
 
-        ctx.gfx.add_font(
-            "Videotype",
-            graphics::FontData::from_path(ctx, "/videotype.ttf").expect("Could not load font"),
-        );
+        match graphics::FontData::from_path(ctx, "/fonts/videotype.ttf") {
+            Ok(font) => ctx.gfx.add_font("Videotype", font),
+            Err(e) => return Err(e.to_string()),
+        }
 
         let player = GameEntity::new(lm.get_level(current_level).unwrap().player);
         let mut boxes = Vec::new();
@@ -45,7 +38,7 @@ impl State {
             boxes.push(GameEntity::new(*box_pos));
         }
 
-        Self {
+        Ok(Self {
             levels: lm,
             sprites: sm,
             current_level,
@@ -53,7 +46,7 @@ impl State {
             boxes,
             moves: Vec::new(),
             game_state: GameState::Playing,
-        }
+        })
     }
 
     fn get_current_level(&self) -> Option<&Level> {

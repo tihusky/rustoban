@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use std::fs::File;
 use std::io::prelude::*;
 
 #[derive(Debug)]
@@ -12,22 +11,25 @@ impl LevelManager {
         Self { levels: Vec::new() }
     }
 
-    pub fn load_from_file(&mut self, path: &str) -> Result<(), String> {
-        if let Ok(mut file) = File::open(path) {
-            let mut contents = String::new();
+    pub fn load_from_file(&mut self, ctx: &Context, path: &str) -> Result<(), String> {
+        match ctx.fs.open(path) {
+            Ok(mut file) => {
+                let mut contents = String::new();
 
-            file.read_to_string(&mut contents)
-                .expect("Error reading levels file");
+                match file.read_to_string(&mut contents) {
+                    Ok(_) => {
+                        let levels: Vec<&str> = contents.split(';').collect();
 
-            let levels: Vec<&str> = contents.split(';').collect();
+                        for level in levels {
+                            self.parse_level_string(level);
+                        }
 
-            for level in levels {
-                self.parse_level_string(level);
+                        Ok(())
+                    }
+                    Err(e) => Err(e.to_string()),
+                }
             }
-
-            Ok(())
-        } else {
-            Err("Could not open levels file!".to_owned())
+            Err(e) => Err(e.to_string()),
         }
     }
 

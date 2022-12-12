@@ -55,7 +55,7 @@ fn main() {
         .build()
         .expect("Could not create ggez context!");
 
-    let state = State::new(&mut ctx);
+    let state = State::new(&mut ctx).expect("Could not initialize game state!");
 
     event::run(ctx, event_loop, state);
 }

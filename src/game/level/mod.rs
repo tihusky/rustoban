@@ -1,7 +1,6 @@
-use crate::prelude::*;
-
 mod level_manager;
 
+use crate::prelude::*;
 pub use level_manager::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
