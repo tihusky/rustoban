@@ -1,10 +1,16 @@
 use crate::prelude::*;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GameState {
+    Playing,
+    Solved,
+}
+
 pub struct State {
     levels: LevelManager,
     sprites: SpriteManager,
     current_level: usize,
-    player: GameEntity,
+    player: Player,
     boxes: Vec<GameEntity>,
     moves: Vec<PlayerMove>,
     game_state: GameState,
@@ -22,7 +28,10 @@ impl State {
         sm.add_sprite(ctx, "wall", "/graphics/wall.png")?;
         sm.add_sprite(ctx, "floor", "/graphics/floor.png")?;
         sm.add_sprite(ctx, "target", "/graphics/target.png")?;
-        sm.add_sprite(ctx, "player", "/graphics/player.png")?;
+        sm.add_sprite(ctx, "player_up", "/graphics/player_up.png")?;
+        sm.add_sprite(ctx, "player_right", "/graphics/player_right.png")?;
+        sm.add_sprite(ctx, "player_down", "/graphics/player_down.png")?;
+        sm.add_sprite(ctx, "player_left", "/graphics/player_left.png")?;
         sm.add_sprite(ctx, "box", "/graphics/box01.png")?;
         sm.add_sprite(ctx, "box_on_target", "/graphics/box02.png")?;
 
@@ -31,7 +40,7 @@ impl State {
             Err(e) => return Err(e.to_string()),
         }
 
-        let player = GameEntity::new(lm.get_level(current_level).unwrap().player);
+        let player_pos = lm.get_level(current_level).unwrap().player;
         let mut boxes = Vec::new();
 
         for box_pos in &lm.get_level(current_level).unwrap().boxes {
@@ -42,7 +51,7 @@ impl State {
             levels: lm,
             sprites: sm,
             current_level,
-            player,
+            player: Player::new(player_pos),
             boxes,
             moves: Vec::new(),
             game_state: GameState::Playing,
@@ -73,39 +82,17 @@ impl State {
         };
 
         if delta.x != 0 || delta.y != 0 {
-            let level = self.get_current_level().unwrap();
-            let player_dest = self.player.position + delta;
+            let level = self.get_current_level().unwrap().clone();
 
-            if level.is_accessible(player_dest) {
-                let mut boxes = self.boxes.clone();
-
-                if let Some(b) = boxes.iter_mut().find(|b| b.position == player_dest) {
-                    let box_dest = b.position + delta;
-                    let contains_box = self
-                        .boxes
-                        .iter()
-                        .map(|b| b.position)
-                        .any(|pos| pos == box_dest);
-
-                    if level.is_accessible(box_dest) && !contains_box {
-                        b.position = box_dest;
-
-                        self.moves.push(PlayerMove {
-                            delta,
-                            box_id: Some(b.id),
-                        });
-
-                        self.boxes = boxes;
-                        self.player.position = player_dest;
-                    }
-                } else {
-                    self.moves.push(PlayerMove {
-                        delta,
-                        box_id: None,
-                    });
-
-                    self.player.position = player_dest;
+            if let Ok(player_move) = self.player.try_move(delta, &level, &self.boxes) {
+                if let Some(box_id) = player_move.box_id {
+                    self.boxes
+                        .iter_mut()
+                        .filter(|b| b.id == box_id)
+                        .for_each(|b| b.position += delta);
                 }
+
+                self.moves.push(player_move);
             }
         }
     }
@@ -119,10 +106,16 @@ impl State {
     }
 
     fn draw_playing(&mut self, ctx: &Context, canvas: &mut Canvas) -> GameResult {
-        self.get_current_level()
-            .unwrap()
-            .draw(&self.sprites, canvas);
-        self.draw_player(&self.sprites, canvas);
+        let level = self.get_current_level().unwrap();
+
+        // Calculate offset to draw player and boxes relative to the left
+        let offset = Point2D {
+            x: (WINDOW_WIDTH - level.width) / 2,
+            y: (WINDOW_HEIGHT - level.height) / 2,
+        };
+
+        level.draw(&self.sprites, canvas);
+        self.player.draw(&self.sprites, canvas, offset);
         self.draw_boxes(&self.sprites, canvas);
 
         let mut hint_blocks: Vec<TextBlock> = Vec::new();
@@ -164,23 +157,6 @@ impl State {
         );
 
         Ok(())
-    }
-
-    fn draw_player(&self, sprites: &SpriteManager, canvas: &mut Canvas) {
-        let level = self.get_current_level().unwrap();
-        let x_offset = (WINDOW_WIDTH - level.width) / 2;
-        let y_offset = (WINDOW_HEIGHT - level.height) / 2;
-        let image = sprites.get_sprite("player").unwrap();
-
-        canvas.draw(
-            image,
-            DrawParam::default()
-                .dest(Point2D {
-                    x: TILE_WIDTH * (self.player.position.x + x_offset),
-                    y: TILE_HEIGHT * (self.player.position.y + y_offset),
-                })
-                .scale(get_scaling_factors(image)),
-        );
     }
 
     fn draw_boxes(&self, sprites: &SpriteManager, canvas: &mut Canvas) {
@@ -260,7 +236,7 @@ impl State {
             boxes.push(GameEntity::new(*pos));
         }
 
-        self.player = GameEntity::new(level.player);
+        self.player = Player::new(level.player);
         self.boxes = boxes;
         self.moves.clear();
     }

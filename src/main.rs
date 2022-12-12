@@ -5,6 +5,7 @@ mod prelude {
     pub use crate::game::gfx::ui::*;
     pub use crate::game::gfx::*;
     pub use crate::game::level::*;
+    pub use crate::game::player::*;
     pub use crate::game::*;
     pub use crate::state::*;
     pub use crate::utils::*;
@@ -22,12 +23,6 @@ mod prelude {
     // In tiles
     pub const WINDOW_WIDTH: i32 = 40;
     pub const WINDOW_HEIGHT: i32 = 25;
-
-    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-    pub enum GameState {
-        Playing,
-        Solved,
-    }
 }
 
 use prelude::*;

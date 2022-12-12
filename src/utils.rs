@@ -1,5 +1,3 @@
-use std::ops::SubAssign;
-
 use crate::mint::Point2;
 use crate::prelude::*;
 
@@ -40,7 +38,7 @@ impl std::ops::Sub for Point2D {
     }
 }
 
-impl SubAssign for Point2D {
+impl std::ops::SubAssign for Point2D {
     fn sub_assign(&mut self, rhs: Self) {
         *self = Self {
             x: self.x - rhs.x,
