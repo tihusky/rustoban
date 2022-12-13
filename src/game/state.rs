@@ -21,7 +21,7 @@ impl State {
         let mut lm = LevelManager::new();
         let current_level = 0;
 
-        lm.load_from_file(ctx, "/levels/levels.txt")?;
+        lm.load_from_file(ctx, "/levels.txt")?;
 
         let mut sm = SpriteManager::new();
 
