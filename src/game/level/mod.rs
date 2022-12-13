@@ -32,6 +32,13 @@ impl Level {
         }
     }
 
+    pub fn is_solved(&self, boxes: &[MovableBox]) -> bool {
+        boxes
+            .iter()
+            .map(|b| b.get_position())
+            .all(|pos| self.targets.contains(pos))
+    }
+
     pub fn is_accessible(&self, point: Point2D) -> bool {
         if let Some(tile) = self.get_tile(point.x, point.y) {
             return *tile != TileType::Wall;
@@ -46,19 +53,15 @@ impl Level {
         self.tiles.get(idx)
     }
 
-    pub fn draw(&self, sprites: &SpriteManager, canvas: &mut Canvas) {
-        // Calculate where to start drawing so the level is centered in the window
-        let x_offset = (WINDOW_WIDTH - self.width) / 2;
-        let y_offset = (WINDOW_HEIGHT - self.height) / 2;
-
+    pub fn draw(&self, sprites: &SpriteManager, canvas: &mut Canvas, offset: Point2D) {
         let bg_image = sprites.get_sprite("floor").unwrap();
 
         for y in 0..self.height {
             for x in 0..self.width {
                 if let Some(tile) = self.get_tile(x, y) {
                     let dest = Point2D {
-                        x: TILE_WIDTH * (x + x_offset),
-                        y: TILE_HEIGHT * (y + y_offset),
+                        x: TILE_WIDTH * (x + offset.x),
+                        y: TILE_HEIGHT * (y + offset.y),
                     };
 
                     canvas.draw(
@@ -79,8 +82,8 @@ impl Level {
                             image,
                             DrawParam::default()
                                 .dest(Point2D {
-                                    x: TILE_WIDTH * (x + x_offset),
-                                    y: TILE_HEIGHT * (y + y_offset),
+                                    x: TILE_WIDTH * (x + offset.x),
+                                    y: TILE_HEIGHT * (y + offset.y),
                                 })
                                 .scale(get_scaling_factors(image)),
                         );

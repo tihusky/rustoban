@@ -32,7 +32,7 @@ impl Player {
         &mut self,
         delta: Point2D,
         level: &Level,
-        boxes: &Vec<GameEntity>,
+        boxes: &Vec<MovableBox>,
     ) -> Result<PlayerMove, ()> {
         let player_dest = self.position + delta;
 
@@ -51,10 +51,8 @@ impl Player {
         }
 
         for b in boxes {
-            if b.position == player_dest {
-                let box_dest = b.position + delta;
-
-                if !level.is_accessible(box_dest) {
+            if *b.get_position() == player_dest {
+                if !b.can_be_moved(delta, level, boxes) {
                     return Err(());
                 }
 
@@ -62,7 +60,7 @@ impl Player {
 
                 return Ok(PlayerMove {
                     delta,
-                    box_id: Some(b.id),
+                    box_id: Some(*b.get_id()),
                 });
             }
         }

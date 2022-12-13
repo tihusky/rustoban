@@ -11,7 +11,7 @@ pub struct State {
     sprites: SpriteManager,
     current_level: usize,
     player: Player,
-    boxes: Vec<GameEntity>,
+    boxes: Vec<MovableBox>,
     moves: Vec<PlayerMove>,
     game_state: GameState,
 }
@@ -44,7 +44,7 @@ impl State {
         let mut boxes = Vec::new();
 
         for box_pos in &lm.get_level(current_level).unwrap().boxes {
-            boxes.push(GameEntity::new(*box_pos));
+            boxes.push(MovableBox::new(*box_pos));
         }
 
         Ok(Self {
@@ -88,8 +88,8 @@ impl State {
                 if let Some(box_id) = player_move.box_id {
                     self.boxes
                         .iter_mut()
-                        .filter(|b| b.id == box_id)
-                        .for_each(|b| b.position += delta);
+                        .filter(|b| *b.get_id() == box_id)
+                        .for_each(|b| *b.get_position_mut() += delta);
                 }
 
                 self.moves.push(player_move);
@@ -98,7 +98,9 @@ impl State {
     }
 
     fn update_solved(&mut self, ctx: &Context) {
-        if ctx.keyboard.is_key_just_pressed(KeyCode::Return) {
+        if ctx.keyboard.is_key_just_pressed(KeyCode::Return)
+            || ctx.keyboard.is_key_just_pressed(KeyCode::NumpadEnter)
+        {
             self.current_level = (self.current_level + 1) % self.levels.num_levels();
             self.reset_level();
             self.game_state = GameState::Playing;
@@ -108,26 +110,29 @@ impl State {
     fn draw_playing(&mut self, ctx: &Context, canvas: &mut Canvas) -> GameResult {
         let level = self.get_current_level().unwrap();
 
-        // Calculate offset to draw player and boxes relative to the left
+        // Calculate offset to draw player and boxes relative to the level
         let offset = Point2D {
             x: (WINDOW_WIDTH - level.width) / 2,
             y: (WINDOW_HEIGHT - level.height) / 2,
         };
 
-        level.draw(&self.sprites, canvas);
+        level.draw(&self.sprites, canvas, offset);
         self.player.draw(&self.sprites, canvas, offset);
-        self.draw_boxes(&self.sprites, canvas);
 
-        let mut hint_blocks: Vec<TextBlock> = Vec::new();
+        for b in &self.boxes {
+            b.draw(&self.sprites, canvas, offset, &level.targets);
+        }
 
-        hint_blocks.push(TextBlock::new(
+        let mut hint_texts: Vec<TextBlock> = Vec::new();
+
+        hint_texts.push(TextBlock::new(
             TextFragment::new("Press BACKSPACE to undo last move")
                 .font("Videotype")
                 .scale(20.0),
             (0.0, 0.0, 0.0, 0.0),
             TextAlign::Begin,
         ));
-        hint_blocks.push(TextBlock::new(
+        hint_texts.push(TextBlock::new(
             TextFragment::new("Press R to reset level")
                 .font("Videotype")
                 .scale(20.0),
@@ -135,9 +140,9 @@ impl State {
             TextAlign::Begin,
         ));
 
-        let mut move_blocks: Vec<TextBlock> = Vec::new();
+        let mut move_texts: Vec<TextBlock> = Vec::new();
 
-        move_blocks.push(TextBlock::new(
+        move_texts.push(TextBlock::new(
             TextFragment::new(&format!("Moves: {}", self.moves.len()))
                 .font("Videotype")
                 .scale(20.0),
@@ -145,11 +150,11 @@ impl State {
             TextAlign::End,
         ));
 
-        print_spaced(ctx, canvas, &hint_blocks, Point2D { x: 32, y: 24 });
+        print_spaced(ctx, canvas, &hint_texts, Point2D { x: 32, y: 24 });
         print_spaced(
             ctx,
             canvas,
-            &move_blocks,
+            &move_texts,
             Point2D {
                 x: (WINDOW_WIDTH * TILE_WIDTH - 32),
                 y: 24,
@@ -157,30 +162,6 @@ impl State {
         );
 
         Ok(())
-    }
-
-    fn draw_boxes(&self, sprites: &SpriteManager, canvas: &mut Canvas) {
-        let level = self.get_current_level().unwrap();
-        let x_offset = (WINDOW_WIDTH - level.width) / 2;
-        let y_offset = (WINDOW_HEIGHT - level.height) / 2;
-
-        for b in &self.boxes {
-            let image = if level.targets.contains(&b.position) {
-                sprites.get_sprite("box_on_target").unwrap()
-            } else {
-                sprites.get_sprite("box").unwrap()
-            };
-
-            canvas.draw(
-                image,
-                DrawParam::default()
-                    .dest(Point2D {
-                        x: TILE_WIDTH * (b.position.x + x_offset),
-                        y: TILE_HEIGHT * (b.position.y + y_offset),
-                    })
-                    .scale(get_scaling_factors(image)),
-            )
-        }
     }
 
     fn draw_solved(&self, ctx: &Context, canvas: &mut Canvas) -> GameResult {
@@ -221,19 +202,19 @@ impl State {
             self.player.position -= last_move.delta;
 
             if let Some(id) = last_move.box_id {
-                let b = self.boxes.iter_mut().find(|b| b.id == id).unwrap();
+                let b = self.boxes.iter_mut().find(|b| *b.get_id() == id).unwrap();
 
-                b.position -= last_move.delta;
+                *b.get_position_mut() -= last_move.delta;
             }
         }
     }
 
     fn reset_level(&mut self) {
         let level = self.get_current_level().unwrap();
-        let mut boxes: Vec<GameEntity> = Vec::new();
+        let mut boxes: Vec<MovableBox> = Vec::new();
 
         for pos in &level.boxes {
-            boxes.push(GameEntity::new(*pos));
+            boxes.push(MovableBox::new(*pos));
         }
 
         self.player = Player::new(level.player);
@@ -246,11 +227,7 @@ impl EventHandler for State {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
         let level = self.get_current_level().unwrap();
 
-        if self
-            .boxes
-            .iter()
-            .all(|b| level.targets.contains(&b.position))
-        {
+        if level.is_solved(&self.boxes) {
             self.game_state = GameState::Solved;
         }
 

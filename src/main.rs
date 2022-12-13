@@ -5,6 +5,7 @@ mod prelude {
     pub use crate::game::gfx::ui::*;
     pub use crate::game::gfx::*;
     pub use crate::game::level::*;
+    pub use crate::game::movable_box::*;
     pub use crate::game::player::*;
     pub use crate::game::*;
     pub use crate::state::*;
